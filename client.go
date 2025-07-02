@@ -111,15 +111,15 @@ type SendEmailRequest struct {
 	TemplateKey string                 `json:"templateKey"`
 	Data        map[string]interface{} `json:"data"`
 	Recipient   string                 `json:"recipient"`
-	Provider    *EmailProvider         `json:"provider,omitempty"`
+	Provider    *EmailProvider         `json:"providerType,omitempty"`
 }
 
 // SendEmailResponse represents the response from sending an email
 type SendEmailResponse struct {
+	Success   bool          `json:"success"`
+	Message   string        `json:"message"`
 	MessageID string        `json:"messageId"`
-	Status    string        `json:"status"`
 	Provider  EmailProvider `json:"provider"`
-	Timestamp time.Time     `json:"timestamp"`
 }
 
 // BulkEmailRequest represents a request to send multiple emails
