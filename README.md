@@ -1,11 +1,11 @@
 # Huefy Go SDK
 
-The official Go SDK for the Huefy email sending platform. Send template-based emails with support for multiple providers, automatic retries, and comprehensive error handling.
+The official Go SDK for the Huefy email sending platform by TeraCrafts. Send template-based emails with support for multiple providers, automatic retries, and comprehensive error handling.
 
 ## Installation
 
 ```bash
-go get github.com/huefy/huefy-sdk/go
+go get github.com/teracrafts/teracrafts-huefy-sdk-go@v1.0.0
 ```
 
 ## Quick Start
@@ -18,7 +18,7 @@ import (
     "fmt"
     "log"
     
-    huefy "github.com/huefy/huefy-sdk/go"
+    huefy "github.com/teracrafts/teracrafts-huefy-sdk-go"
 )
 
 func main() {
@@ -284,6 +284,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 For support and questions:
 
-- 📧 Email: support@huefy.com
+- 📧 Email: support@teracrafts.com
 - 📖 Documentation: https://docs.huefy.com
-- 🐛 Issues: https://github.com/huefy/huefy-sdk/issues
+- 🐛 Issues: https://github.com/teracrafts/teracrafts-huefy-sdk-go/issues
