@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/teracrafts/teracrafts-huefy-sdk-go"
+	"github.com/teracrafts/huefy-sdk-go"
 )
 
 // Example user data structure

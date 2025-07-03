@@ -1,4 +1,4 @@
-module github.com/teracrafts/teracrafts-huefy-sdk-go
+module github.com/teracrafts/huefy-sdk-go
 
 go 1.21
 

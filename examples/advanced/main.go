@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	huefy "github.com/teracrafts/teracrafts-huefy-sdk-go"
+	huefy "github.com/teracrafts/huefy-sdk-go"
 )
 
 func main() {
