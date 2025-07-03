@@ -5,7 +5,7 @@ The official Go SDK for the Huefy email sending platform by TeraCrafts. Send tem
 ## Installation
 
 ```bash
-go get github.com/teracrafts/huefy-sdk-go@v2.0.0
+go get github.com/teracrafts/huefy-sdk-go/v2@v2.0.0
 ```
 
 ## Quick Start
@@ -18,7 +18,7 @@ import (
     "fmt"
     "log"
     
-    huefy "github.com/teracrafts/huefy-sdk-go"
+    huefy "github.com/teracrafts/huefy-sdk-go/v2"
 )
 
 func main() {

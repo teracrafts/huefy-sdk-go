@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	huefy "github.com/teracrafts/huefy-sdk-go"
+	huefy "github.com/teracrafts/huefy-sdk-go/v2"
 )
 
 func main() {
