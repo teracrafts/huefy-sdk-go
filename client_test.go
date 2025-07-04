@@ -25,7 +25,7 @@ func TestNewClient(t *testing.T) {
 			apiKey: "test-key",
 			expected: &Client{
 				apiKey:      "test-key",
-				baseURL:     "https://api.huefy.com",
+				baseURL:     "https://api.huefy.dev",
 				retryConfig: DefaultRetryConfig,
 			},
 		},
@@ -48,7 +48,7 @@ func TestNewClient(t *testing.T) {
 			})},
 			expected: &Client{
 				apiKey:  "test-key",
-				baseURL: "https://api.huefy.com",
+				baseURL: "https://api.huefy.dev",
 				retryConfig: &RetryConfig{
 					MaxRetries: 5,
 					BaseDelay:  2 * time.Second,
@@ -342,7 +342,7 @@ func TestClient_HealthCheck(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "/api/v1/sdk/health", r.URL.Path)
+		assert.Equal(t, endpointHealthCheck, r.URL.Path)
 
 		w.WriteHeader(http.StatusOK)
 		jsonData, _ := json.Marshal(expectedResponse)

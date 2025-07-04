@@ -26,7 +26,7 @@ func main() {
 
 	// Create client with custom configuration
 	client := huefy.NewClient(apiKey,
-		huefy.WithBaseURL("https://api.huefy.com"),
+		huefy.WithBaseURL("https://api.huefy.dev"),
 		huefy.WithHTTPClient(customHTTPClient),
 		huefy.WithRetryConfig(&huefy.RetryConfig{
 			MaxRetries: 5,                   // Retry up to 5 times

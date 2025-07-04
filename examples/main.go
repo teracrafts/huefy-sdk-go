@@ -55,7 +55,7 @@ func main() {
 	fmt.Println("=== Basic Email Sending ===")
 	
 	config := &huefy.Config{
-		BaseURL: "https://api.huefy.com",
+		BaseURL: "https://api.huefy.dev",
 		Timeout: 30 * time.Second,
 		RetryConfig: &huefy.RetryConfig{
 			MaxRetries: 3,
@@ -328,7 +328,7 @@ func handleEmailError(err error, operation string) {
 // Example of using the client with custom configuration
 func createCustomClient(apiKey string) *huefy.Client {
 	config := &huefy.Config{
-		BaseURL: "https://api.huefy.com",
+		BaseURL: "https://api.huefy.dev",
 		Timeout: 45 * time.Second,
 		RetryConfig: &huefy.RetryConfig{
 			MaxRetries: 5,

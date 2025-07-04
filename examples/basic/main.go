@@ -22,7 +22,7 @@ func main() {
 
 	// Alternatively, create client with custom configuration
 	// client := huefy.NewClient(apiKey,
-	//     huefy.WithBaseURL("https://api.huefy.com"),
+	//     huefy.WithBaseURL("https://api.huefy.dev"),
 	//     huefy.WithRetryConfig(&huefy.RetryConfig{
 	//         MaxRetries: 3,
 	//         BaseDelay:  time.Second,

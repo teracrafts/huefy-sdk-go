@@ -66,7 +66,6 @@ client := huefy.NewClient("your-api-key")
 
 ```go
 client := huefy.NewClient("your-api-key",
-    huefy.WithBaseURL("https://api.huefy.com"),
     huefy.WithHTTPClient(&http.Client{
         Timeout: 60 * time.Second,
     }),
