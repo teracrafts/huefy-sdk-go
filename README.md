@@ -283,6 +283,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 For support and questions:
 
-- 📧 Email: support@teracrafts.com
-- 📖 Documentation: https://docs.huefy.com
+- 📧 Email: support@huefy.dev
+- 📖 Documentation: https://www.huefy.dev/docs
 - 🐛 Issues: https://github.com/teracrafts/huefy-sdk-go/issues

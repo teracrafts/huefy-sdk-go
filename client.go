@@ -22,8 +22,7 @@ package huefy
 
 import (
 	"context"
-	"net/http"
-	"time"
+	"fmt"
 
 	"github.com/teracrafts/huefy-sdk/core/kernel"
 )
@@ -53,22 +52,14 @@ var DefaultRetryConfig = core.DefaultRetryConfig
 type ClientOption func(*clientOptions)
 
 type clientOptions struct {
-	baseURL     string
-	httpClient  *http.Client
+	endpoint    string
 	retryConfig *RetryConfig
 }
 
-// WithBaseURL sets a custom base URL for the API
-func WithBaseURL(baseURL string) ClientOption {
+// WithEndpoint sets a custom gRPC endpoint for the API
+func WithEndpoint(endpoint string) ClientOption {
 	return func(o *clientOptions) {
-		o.baseURL = baseURL
-	}
-}
-
-// WithHTTPClient sets a custom HTTP client
-func WithHTTPClient(httpClient *http.Client) ClientOption {
-	return func(o *clientOptions) {
-		o.httpClient = httpClient
+		o.endpoint = endpoint
 	}
 }
 
@@ -83,7 +74,6 @@ func WithRetryConfig(config *RetryConfig) ClientOption {
 func NewClient(apiKey string, opts ...ClientOption) *Client {
 	// Process options
 	options := &clientOptions{
-		httpClient:  &http.Client{Timeout: 30 * time.Second},
 		retryConfig: DefaultRetryConfig,
 	}
 
@@ -93,18 +83,18 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 
 	// Create core options
 	var coreOpts []core.ClientOption
-	if options.baseURL != "" {
-		coreOpts = append(coreOpts, core.WithBaseURL(options.baseURL))
-	}
-	if options.httpClient != nil {
-		coreOpts = append(coreOpts, core.WithHTTPClient(options.httpClient))
+	if options.endpoint != "" {
+		coreOpts = append(coreOpts, core.WithEndpoint(options.endpoint))
 	}
 	if options.retryConfig != nil {
 		coreOpts = append(coreOpts, core.WithRetryConfig(options.retryConfig))
 	}
 
 	// Create core client
-	coreClient := core.NewClient(apiKey, coreOpts...)
+	coreClient, err := core.NewClient(apiKey, coreOpts...)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create Huefy client: %v", err))
+	}
 
 	return &Client{
 		coreClient: coreClient,
@@ -142,5 +132,10 @@ func (c *Client) SendBulkEmails(ctx context.Context, emails []SendEmailRequest) 
 // HealthCheck checks the API health status
 func (c *Client) HealthCheck(ctx context.Context) (*HealthResponse, error) {
 	return c.coreClient.HealthCheck(ctx)
+}
+
+// Close closes the underlying gRPC connection
+func (c *Client) Close() error {
+	return c.coreClient.Close()
 }
 
