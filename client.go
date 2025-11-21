@@ -48,15 +48,22 @@ type RetryConfig = core.RetryConfig
 // DefaultRetryConfig re-exports the core default retry config
 var DefaultRetryConfig = core.DefaultRetryConfig
 
+// Production and local endpoints
+const (
+	ProductionGRPCEndpoint = "api.huefy.dev:50051"
+	LocalGRPCEndpoint      = "localhost:50051"
+)
+
 // ClientOption represents an option for configuring the client
 type ClientOption func(*clientOptions)
 
 type clientOptions struct {
 	endpoint    string
 	retryConfig *RetryConfig
+	local       bool
 }
 
-// WithEndpoint sets a custom gRPC endpoint for the API
+// WithEndpoint sets a custom gRPC endpoint for the API (overrides local setting)
 func WithEndpoint(endpoint string) ClientOption {
 	return func(o *clientOptions) {
 		o.endpoint = endpoint
@@ -67,6 +74,13 @@ func WithEndpoint(endpoint string) ClientOption {
 func WithRetryConfig(config *RetryConfig) ClientOption {
 	return func(o *clientOptions) {
 		o.retryConfig = config
+	}
+}
+
+// WithLocal uses local development endpoints instead of production
+func WithLocal() ClientOption {
+	return func(o *clientOptions) {
+		o.local = true
 	}
 }
 
@@ -81,11 +95,19 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 		opt(options)
 	}
 
+	// Determine endpoint: custom > local > production
+	endpoint := options.endpoint
+	if endpoint == "" {
+		if options.local {
+			endpoint = LocalGRPCEndpoint
+		} else {
+			endpoint = ProductionGRPCEndpoint
+		}
+	}
+
 	// Create core options
 	var coreOpts []core.ClientOption
-	if options.endpoint != "" {
-		coreOpts = append(coreOpts, core.WithEndpoint(options.endpoint))
-	}
+	coreOpts = append(coreOpts, core.WithEndpoint(endpoint))
 	if options.retryConfig != nil {
 		coreOpts = append(coreOpts, core.WithRetryConfig(options.retryConfig))
 	}
