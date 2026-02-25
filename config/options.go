@@ -1,0 +1,152 @@
+package config
+
+import (
+	"time"
+
+	"github.com/teracrafts/huefy-go/types"
+)
+
+// Config holds all configuration for the Huefy client.
+type Config struct {
+	// APIKey is the primary API key for authentication.
+	APIKey string
+
+	// BaseURL is the base URL of the Huefy API.
+	BaseURL string
+
+	// Timeout is the HTTP request timeout duration.
+	Timeout time.Duration
+
+	// RetryConfig configures the retry behavior.
+	RetryConfig RetryConfig
+
+	// CircuitBreakerConfig configures the circuit breaker behavior.
+	CircuitBreakerConfig CircuitBreakerConfig
+
+	// Logger is the logger used by the SDK.
+	Logger types.Logger
+
+	// SecondaryAPIKey is an optional secondary API key used for key rotation.
+	SecondaryAPIKey string
+
+	// EnableRequestSigning enables HMAC request signing.
+	EnableRequestSigning bool
+
+	// EnableErrorSanitization enables sanitization of sensitive data in error messages.
+	EnableErrorSanitization bool
+}
+
+// RetryConfig configures the retry behavior for failed requests.
+type RetryConfig struct {
+	// MaxRetries is the maximum number of retry attempts. Default: 3.
+	MaxRetries int
+
+	// BaseDelay is the base delay between retries. Default: 1s.
+	BaseDelay time.Duration
+
+	// MaxDelay is the maximum delay between retries. Default: 30s.
+	MaxDelay time.Duration
+
+	// RetryableStatusCodes is the list of HTTP status codes that trigger a retry.
+	RetryableStatusCodes []int
+}
+
+// CircuitBreakerConfig configures the circuit breaker behavior.
+type CircuitBreakerConfig struct {
+	// FailureThreshold is the number of failures before the circuit opens. Default: 5.
+	FailureThreshold int
+
+	// ResetTimeout is the duration the circuit stays open before transitioning to half-open. Default: 30s.
+	ResetTimeout time.Duration
+
+	// HalfOpenRequests is the number of requests allowed in half-open state. Default: 1.
+	HalfOpenRequests int
+}
+
+// DefaultConfig returns a Config with sensible defaults.
+func DefaultConfig(apiKey string) Config {
+	return Config{
+		APIKey:  apiKey,
+		Timeout: 30 * time.Second,
+		RetryConfig: RetryConfig{
+			MaxRetries: 3,
+			BaseDelay:  1 * time.Second,
+			MaxDelay:   30 * time.Second,
+			RetryableStatusCodes: []int{408, 429, 500, 502, 503, 504},
+		},
+		CircuitBreakerConfig: CircuitBreakerConfig{
+			FailureThreshold: 5,
+			ResetTimeout:     30 * time.Second,
+			HalfOpenRequests: 1,
+		},
+		Logger:                  types.NewNoopLogger(),
+		EnableRequestSigning:    false,
+		EnableErrorSanitization: false,
+	}
+}
+
+// Option is a functional option for configuring the Huefy client.
+type Option func(*Config)
+
+// WithBaseURL sets the base URL for the API client.
+func WithBaseURL(url string) Option {
+	return func(c *Config) {
+		c.BaseURL = url
+	}
+}
+
+// WithTimeout sets the HTTP request timeout.
+func WithTimeout(timeout time.Duration) Option {
+	return func(c *Config) {
+		c.Timeout = timeout
+	}
+}
+
+// WithRetryConfig sets the retry configuration.
+func WithRetryConfig(rc RetryConfig) Option {
+	return func(c *Config) {
+		c.RetryConfig = rc
+	}
+}
+
+// WithCircuitBreakerConfig sets the circuit breaker configuration.
+func WithCircuitBreakerConfig(cbc CircuitBreakerConfig) Option {
+	return func(c *Config) {
+		c.CircuitBreakerConfig = cbc
+	}
+}
+
+// WithLogger sets the logger for the client.
+func WithLogger(logger types.Logger) Option {
+	return func(c *Config) {
+		c.Logger = logger
+	}
+}
+
+// WithSecondaryAPIKey sets a secondary API key for key rotation on 401 responses.
+func WithSecondaryAPIKey(key string) Option {
+	return func(c *Config) {
+		c.SecondaryAPIKey = key
+	}
+}
+
+// WithRequestSigning enables HMAC request signing for enhanced security.
+func WithRequestSigning(enable bool) Option {
+	return func(c *Config) {
+		c.EnableRequestSigning = enable
+	}
+}
+
+// WithErrorSanitization enables sanitization of sensitive data in error messages.
+func WithErrorSanitization(enable bool) Option {
+	return func(c *Config) {
+		c.EnableErrorSanitization = enable
+	}
+}
+
+// Apply applies all options to the config.
+func (c *Config) Apply(opts ...Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+}
