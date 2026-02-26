@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/teracrafts/huefy-go/config"
+	sdkerrors "github.com/teracrafts/huefy-go/errors"
 	internalhttp "github.com/teracrafts/huefy-go/internal/http"
 	"github.com/teracrafts/huefy-go/types"
 )
@@ -25,7 +27,11 @@ type Client struct {
 //	    config.WithLogger(types.NewConsoleLogger()),
 //	)
 //	defer c.Close()
-func NewClient(apiKey string, opts ...config.Option) *Client {
+func NewClient(apiKey string, opts ...config.Option) (*Client, error) {
+	if strings.TrimSpace(apiKey) == "" {
+		return nil, sdkerrors.NewError(sdkerrors.ErrAuthMissingKey, "api_key is required")
+	}
+
 	cfg := config.DefaultConfig(apiKey)
 	cfg.Apply(opts...)
 
@@ -34,7 +40,7 @@ func NewClient(apiKey string, opts ...config.Option) *Client {
 	return &Client{
 		httpClient: httpClient,
 		config:     cfg,
-	}
+	}, nil
 }
 
 // HealthCheck performs a health check against the Huefy API.
@@ -51,6 +57,18 @@ func (c *Client) HealthCheck(ctx context.Context) (*types.HealthResponse, error)
 	}
 
 	return &health, nil
+}
+
+// Request performs an HTTP request through the base client's infrastructure,
+// including retry logic, circuit breaking, and optional request signing.
+// It returns the raw response body on success.
+func (c *Client) Request(ctx context.Context, method, path string, body any) ([]byte, error) {
+	return c.httpClient.Request(ctx, method, path, body)
+}
+
+// GetLogger returns the logger used by the client.
+func (c *Client) GetLogger() types.Logger {
+	return c.config.Logger
 }
 
 // Close releases any resources held by the client. It should be called when
