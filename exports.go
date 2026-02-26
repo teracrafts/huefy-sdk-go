@@ -18,6 +18,7 @@ import (
 	"github.com/teracrafts/huefy-go/client"
 	"github.com/teracrafts/huefy-go/config"
 	"github.com/teracrafts/huefy-go/errors"
+	"github.com/teracrafts/huefy-go/models"
 	"github.com/teracrafts/huefy-go/security"
 	"github.com/teracrafts/huefy-go/types"
 )
@@ -73,6 +74,23 @@ var (
 type (
 	SignedPayload    = security.SignedPayload
 	RequestSignature = security.RequestSignature
+)
+
+// Email model re-exports.
+type (
+	EmailProvider     = models.EmailProvider
+	SendEmailRequest  = models.SendEmailRequest
+	SendEmailResponse = models.SendEmailResponse
+	BulkEmailResult   = models.BulkEmailResult
+	BulkEmailError    = models.BulkEmailError
+	BulkEmailResponse = models.BulkEmailResponse
+)
+
+const (
+	ProviderSES       = models.ProviderSES
+	ProviderSendGrid  = models.ProviderSendGrid
+	ProviderMailgun   = models.ProviderMailgun
+	ProviderMailchimp = models.ProviderMailchimp
 )
 
 // Types re-exports.
