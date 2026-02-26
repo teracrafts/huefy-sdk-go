@@ -1,0 +1,101 @@
+package huefy
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/teracrafts/huefy-go/client"
+	"github.com/teracrafts/huefy-go/config"
+	"github.com/teracrafts/huefy-go/models"
+	"github.com/teracrafts/huefy-go/security"
+	"github.com/teracrafts/huefy-go/validators"
+)
+
+// EmailClient extends the base client with email-specific operations.
+type EmailClient struct {
+	*client.Client
+}
+
+// NewEmailClient creates a new Huefy email client.
+func NewEmailClient(apiKey string, opts ...config.Option) (*EmailClient, error) {
+	c, err := client.NewClient(apiKey, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &EmailClient{
+		Client: c,
+	}, nil
+}
+
+// toAnyMap converts a map[string]string to map[string]any for PII detection.
+func toAnyMap(m map[string]string) map[string]any {
+	result := make(map[string]any, len(m))
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
+}
+
+// SendEmail sends a single email using a template.
+func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailRequest) (*models.SendEmailResponse, error) {
+	security.WarnIfPotentialPII(toAnyMap(req.Data), "email template data", c.GetLogger())
+
+	errs := validators.ValidateSendEmailInput(req.TemplateKey, req.Data, req.Recipient)
+	if len(errs) > 0 {
+		msgs := make([]string, len(errs))
+		for i, e := range errs {
+			msgs[i] = e.Error()
+		}
+		return nil, fmt.Errorf("validation failed: %s", strings.Join(msgs, "; "))
+	}
+
+	req.TemplateKey = strings.TrimSpace(req.TemplateKey)
+	req.Recipient = strings.TrimSpace(req.Recipient)
+
+	data, err := c.Client.Request(ctx, "POST", "/emails/send", req)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp models.SendEmailResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &resp, nil
+}
+
+// SendBulkEmails sends multiple emails in a single request.
+func (c *EmailClient) SendBulkEmails(ctx context.Context, requests []models.SendEmailRequest) (*models.BulkEmailResponse, error) {
+	if err := validators.ValidateBulkCount(len(requests)); err != nil {
+		return nil, err
+	}
+
+	for i := range requests {
+		security.WarnIfPotentialPII(toAnyMap(requests[i].Data), "email template data", c.GetLogger())
+		errs := validators.ValidateSendEmailInput(requests[i].TemplateKey, requests[i].Data, requests[i].Recipient)
+		if len(errs) > 0 {
+			msgs := make([]string, len(errs))
+			for j, e := range errs {
+				msgs[j] = e.Error()
+			}
+			return nil, fmt.Errorf("validation failed for %s: %s", requests[i].Recipient, strings.Join(msgs, "; "))
+		}
+		requests[i].TemplateKey = strings.TrimSpace(requests[i].TemplateKey)
+		requests[i].Recipient = strings.TrimSpace(requests[i].Recipient)
+	}
+
+	data, err := c.Client.Request(ctx, "POST", "/emails/bulk", requests)
+	if err != nil {
+		return nil, err
+	}
+
+	var resp models.BulkEmailResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &resp, nil
+}
