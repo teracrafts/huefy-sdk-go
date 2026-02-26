@@ -27,11 +27,11 @@ const (
 )
 
 // GetBaseURL returns the appropriate base URL based on the HUEFY_MODE
-// environment variable. If set to "development" or "local", it returns the
-// local base URL; otherwise, it returns the production base URL.
+// environment variable. If set to "local", it returns the local base URL;
+// otherwise, it returns the production base URL.
 func GetBaseURL() string {
 	mode := os.Getenv("HUEFY_MODE")
-	if mode == "development" || mode == "local" {
+	if mode == "local" {
 		return LOCAL_BASE_URL
 	}
 	return BASE_URL
@@ -56,6 +56,7 @@ func NewClient(apiKey string, cfg *config.Config) *Client {
 	}
 
 	transport := gohttp.DefaultTransport.(*gohttp.Transport).Clone()
+	transport.MaxIdleConnsPerHost = 20
 
 	httpClient := &gohttp.Client{
 		Timeout:   cfg.Timeout,
@@ -88,11 +89,16 @@ func (c *Client) Request(ctx context.Context, method, path string, body any) ([]
 	currentKey := c.apiKey
 	attempted401Rotation := false
 
-	var lastErr error
+	// Capture the response body from the successful attempt inside the retry loop.
+	var responseBody []byte
 
 	retryFn := func() error {
+		var innerBody []byte
+		var innerErr error
+
 		err := c.circuitBreaker.Execute(func() error {
-			return c.doRequest(ctx, method, path, body, currentKey)
+			innerBody, innerErr = c.doRequestFull(ctx, method, path, body, currentKey)
+			return innerErr
 		})
 
 		if err != nil {
@@ -102,14 +108,23 @@ func (c *Client) Request(ctx context.Context, method, path string, body any) ([]
 					c.logger.Warn("received 401, rotating to secondary API key")
 					currentKey = c.config.SecondaryAPIKey
 					attempted401Rotation = true
-					// Return a recoverable error to trigger retry.
-					sdkErr.Recoverable = true
-					return sdkErr
+					// Return a new recoverable error to trigger retry (don't mutate original).
+					return &sdkerrors.HuefyError{
+						Code:        sdkErr.Code,
+						Message:     sdkErr.Message,
+						Recoverable: true,
+						StatusCode:  sdkErr.StatusCode,
+						RequestID:   sdkErr.RequestID,
+						Timestamp:   sdkErr.Timestamp,
+						Details:     sdkErr.Details,
+						RetryAfter:  sdkErr.RetryAfter,
+					}
 				}
 			}
-			lastErr = err
 			return err
 		}
+
+		responseBody = innerBody
 		return nil
 	}
 
@@ -124,19 +139,8 @@ func (c *Client) Request(ctx context.Context, method, path string, body any) ([]
 		}
 		return nil, err
 	}
-	_ = lastErr
 
-	// If we got here via the retry function succeeding, we need to actually
-	// perform the request and return the body. The retry wrapper only tells us
-	// if it succeeded; we need the response data. Re-do the final request.
-	return c.doRequestFull(ctx, method, path, body, currentKey)
-}
-
-// doRequest performs a single HTTP request and returns an error if it fails.
-// Used by the circuit breaker and retry logic.
-func (c *Client) doRequest(ctx context.Context, method, path string, body any, apiKey string) error {
-	_, err := c.doRequestFull(ctx, method, path, body, apiKey)
-	return err
+	return responseBody, nil
 }
 
 // doRequestFull performs a single HTTP request and returns the response body.
@@ -217,11 +221,11 @@ func (c *Client) buildErrorFromResponse(resp *gohttp.Response, body []byte) *sdk
 		message = "request timeout"
 		recoverable = true
 	case resp.StatusCode == 429:
-		code = sdkerrors.ErrNetworkConnection
+		code = sdkerrors.ErrRateLimited
 		message = "rate limited"
 		recoverable = true
 	case resp.StatusCode >= 500:
-		code = sdkerrors.ErrNetworkConnection
+		code = sdkerrors.ErrServerError
 		message = fmt.Sprintf("server error: %d", resp.StatusCode)
 		recoverable = true
 	}
