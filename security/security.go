@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -38,43 +39,31 @@ type RequestSignature struct {
 	KeyID string
 }
 
-// piiPatterns contains field name substrings that commonly indicate PII.
+// piiPatterns contains normalized (lowercase, no hyphens/underscores) field name
+// substrings that commonly indicate PII. Field names are normalized the same way
+// before matching, so these patterns match regardless of separator style.
 var piiPatterns = []string{
-	"ssn", "social_security", "socialSecurity",
-	"password", "passwd", "pass_word",
-	"secret", "token", "api_key", "apiKey", "api-key",
-	"credit_card", "creditCard", "credit-card",
-	"card_number", "cardNumber", "card-number",
-	"cvv", "cvc", "ccv",
-	"expiry", "expiration", "exp_date",
-	"birth", "dob", "date_of_birth", "dateOfBirth",
-	"phone", "mobile", "cell", "telephone",
-	"address", "street", "city", "zip", "postal",
-	"email", "e-mail", "e_mail",
-	"first_name", "firstName", "first-name",
-	"last_name", "lastName", "last-name",
-	"full_name", "fullName", "full-name",
-	"driver_license", "driverLicense", "driver-license",
-	"passport", "passport_number",
-	"national_id", "nationalId", "national-id",
-	"tax_id", "taxId", "tax-id",
-	"bank_account", "bankAccount", "bank-account",
-	"routing_number", "routingNumber", "routing-number",
-	"iban", "swift", "bic",
-	"ip_address", "ipAddress", "ip-address",
-	"mac_address", "macAddress", "mac-address",
-	"latitude", "longitude", "lat", "lng", "geo",
-	"biometric", "fingerprint", "retina",
-	"medical", "health", "diagnosis", "prescription",
-	"insurance", "policy_number", "policyNumber",
-	"salary", "income", "wage", "compensation",
+	"email", "phone", "telephone", "mobile",
+	"ssn", "socialsecurity",
+	"creditcard", "cardnumber", "cvv",
+	"password", "passwd", "secret", "token",
+	"apikey", "privatekey",
+	"accesstoken", "refreshtoken", "authtoken",
+	"address", "street", "zipcode", "postalcode",
+	"dateofbirth", "dob", "birthdate",
+	"passport", "driverlicense", "nationalid",
+	"bankaccount", "routingnumber", "iban", "swift",
 }
 
 // IsPotentialPIIField checks whether a field name matches any known PII pattern.
+// The field name is normalized by lowercasing and removing hyphens and underscores
+// before checking for substring matches.
 func IsPotentialPIIField(fieldName string) bool {
-	lower := strings.ToLower(fieldName)
+	normalized := strings.ToLower(fieldName)
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ReplaceAll(normalized, "_", "")
 	for _, pattern := range piiPatterns {
-		if strings.Contains(lower, strings.ToLower(pattern)) {
+		if strings.Contains(normalized, strings.ToLower(pattern)) {
 			return true
 		}
 	}
@@ -139,29 +128,26 @@ func GetKeyID(apiKey string) string {
 }
 
 // IsServerKey reports whether the given API key looks like a server key
-// (starts with "srv_", "svr_", or "server_").
+// (starts with "srv_").
 func IsServerKey(apiKey string) bool {
 	lower := strings.ToLower(apiKey)
-	return strings.HasPrefix(lower, "srv_") ||
-		strings.HasPrefix(lower, "svr_") ||
-		strings.HasPrefix(lower, "server_")
+	return strings.HasPrefix(lower, "srv_")
 }
 
 // IsClientKey reports whether the given API key looks like a client key
-// (starts with "pk_", "pub_", or "client_").
+// (starts with "sdk_" or "cli_").
 func IsClientKey(apiKey string) bool {
 	lower := strings.ToLower(apiKey)
-	return strings.HasPrefix(lower, "pk_") ||
-		strings.HasPrefix(lower, "pub_") ||
-		strings.HasPrefix(lower, "client_")
+	return strings.HasPrefix(lower, "sdk_") ||
+		strings.HasPrefix(lower, "cli_")
 }
 
 // CreateRequestSignature generates a RequestSignature for the given body and
-// API key. The signature is an HMAC-SHA256 of the body concatenated with the
+// API key. The signature is an HMAC-SHA256 of "timestamp.body" using the
 // current Unix millisecond timestamp.
 func CreateRequestSignature(body, apiKey string) RequestSignature {
 	timestamp := time.Now().UnixMilli()
-	message := fmt.Sprintf("%s.%d", body, timestamp)
+	message := fmt.Sprintf("%d.%s", timestamp, body)
 	signature := GenerateHMACSHA256(message, apiKey)
 
 	return RequestSignature{
@@ -190,7 +176,7 @@ func VerifyRequestSignature(body, signature string, timestamp int64, apiKey stri
 	}
 
 	// Regenerate and compare.
-	message := fmt.Sprintf("%s.%d", body, timestamp)
+	message := fmt.Sprintf("%d.%s", timestamp, body)
 	expected := GenerateHMACSHA256(message, apiKey)
 
 	return hmac.Equal([]byte(signature), []byte(expected))
@@ -198,12 +184,17 @@ func VerifyRequestSignature(body, signature string, timestamp int64, apiKey stri
 
 // SignPayload signs a data map with the given API key and timestamp, returning
 // a SignedPayload that includes the original data, signature, timestamp, and
-// key identifier.
+// key identifier. The data is serialized using json.Marshal which produces
+// deterministic output with sorted keys.
 func SignPayload(data map[string]any, apiKey string, timestamp int64) SignedPayload {
-	// Serialize the data deterministically enough for signing.
-	// For template purposes, we use fmt.Sprintf; real implementations should
-	// use canonical JSON serialization.
-	message := fmt.Sprintf("%v.%d", data, timestamp)
+	// Serialize the data deterministically using JSON (encoding/json sorts map keys).
+	bodyBytes, err := json.Marshal(data)
+	if err != nil {
+		// Fall back to empty body on marshal failure; callers should ensure
+		// data is JSON-serializable.
+		bodyBytes = []byte("{}")
+	}
+	message := fmt.Sprintf("%d.%s", timestamp, string(bodyBytes))
 	signature := GenerateHMACSHA256(message, apiKey)
 
 	return SignedPayload{
