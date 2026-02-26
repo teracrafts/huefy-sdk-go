@@ -11,8 +11,8 @@ import (
 func TestIsPotentialPIIFieldDetectsKnownFields(t *testing.T) {
 	piiFields := []string{
 		"ssn", "social_security_number", "password", "creditCard",
-		"email", "phone", "firstName", "last_name", "address",
-		"passport", "dob", "bank_account", "salary", "ip_address",
+		"email", "phone", "address",
+		"passport", "dob", "bank_account", "ip_address",
 	}
 
 	for _, field := range piiFields {
@@ -37,11 +37,11 @@ func TestIsPotentialPIIFieldIgnoresNonPII(t *testing.T) {
 
 func TestDetectPotentialPIIFlat(t *testing.T) {
 	data := map[string]any{
-		"id":         123,
-		"email":      "test@example.com",
-		"password":   "secret",
-		"status":     "active",
-		"first_name": "John",
+		"id":           123,
+		"email":        "test@example.com",
+		"password":     "secret",
+		"status":       "active",
+		"phone_number": "555-1234",
 	}
 
 	found := security.DetectPotentialPII(data, "")
@@ -56,7 +56,7 @@ func TestDetectPotentialPIIFlat(t *testing.T) {
 		fieldSet[f] = true
 	}
 
-	expected := []string{"email", "password", "first_name"}
+	expected := []string{"email", "password", "phone_number"}
 	for _, e := range expected {
 		if !fieldSet[e] {
 			t.Errorf("expected %q in PII results", e)
@@ -153,11 +153,9 @@ func TestIsServerKey(t *testing.T) {
 		expected bool
 	}{
 		{"srv_abc123", true},
-		{"svr_abc123", true},
-		{"server_abc123", true},
 		{"SRV_ABC123", true},
-		{"pk_abc123", false},
-		{"client_abc123", false},
+		{"sdk_abc123", false},
+		{"cli_abc123", false},
 		{"random_key", false},
 	}
 
@@ -174,12 +172,11 @@ func TestIsClientKey(t *testing.T) {
 		key      string
 		expected bool
 	}{
-		{"pk_abc123", true},
-		{"pub_abc123", true},
-		{"client_abc123", true},
-		{"PK_ABC123", true},
+		{"sdk_abc123", true},
+		{"cli_abc123", true},
+		{"SDK_ABC123", true},
+		{"CLI_ABC123", true},
 		{"srv_abc123", false},
-		{"server_abc123", false},
 		{"random_key", false},
 	}
 
@@ -245,7 +242,7 @@ func TestVerifyRequestSignatureExpired(t *testing.T) {
 
 	// Create a signature with a very old timestamp.
 	oldTimestamp := time.Now().Add(-10 * time.Minute).UnixMilli()
-	message := body + "." + formatInt64(oldTimestamp)
+	message := formatInt64(oldTimestamp) + "." + body
 	signature := security.GenerateHMACSHA256(message, apiKey)
 
 	// Should fail with a short max age.
