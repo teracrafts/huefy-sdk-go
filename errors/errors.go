@@ -25,6 +25,12 @@ const (
 	ErrNetworkDNS        ErrorCode = "NETWORK_DNS"
 	ErrNetworkSSL        ErrorCode = "NETWORK_SSL"
 
+	// Rate limiting errors.
+	ErrRateLimited ErrorCode = "RATE_LIMITED"
+
+	// Server errors.
+	ErrServerError ErrorCode = "SERVER_ERROR"
+
 	// Circuit breaker errors.
 	ErrCircuitOpen ErrorCode = "CIRCUIT_OPEN"
 
@@ -58,6 +64,8 @@ var NumericCodeMap = map[ErrorCode]int{
 	ErrNetworkConnection:        3001,
 	ErrNetworkDNS:               3002,
 	ErrNetworkSSL:               3003,
+	ErrRateLimited:              3100,
+	ErrServerError:              3200,
 	ErrCircuitOpen:              4000,
 	ErrConfigInvalid:            5000,
 	ErrConfigMissing:            5001,
