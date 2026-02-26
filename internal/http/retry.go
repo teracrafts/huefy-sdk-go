@@ -34,10 +34,12 @@ func WithRetry(ctx context.Context, fn func() error, cfg *config.RetryConfig, lo
 
 			logger.Info("retrying request (attempt " + strconv.Itoa(attempt) + "/" + strconv.Itoa(cfg.MaxRetries) + ") after " + delay.String())
 
+			timer := time.NewTimer(delay)
 			select {
 			case <-ctx.Done():
+				timer.Stop()
 				return sdkerrors.NewErrorWithCause(sdkerrors.ErrNetworkTimeout, "request cancelled during retry backoff", ctx.Err())
-			case <-time.After(delay):
+			case <-timer.C:
 			}
 		}
 
