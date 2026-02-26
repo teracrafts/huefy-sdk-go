@@ -30,6 +30,19 @@ type sanitizationPattern struct {
 	category    string
 }
 
+// Pre-compiled regex patterns for sanitization. These are compiled once at
+// package init time and reused on every call to avoid repeated compilation.
+var (
+	reUnixPath         = regexp.MustCompile(`(?:/[a-zA-Z0-9._-]+){2,}`)
+	reWindowsPath      = regexp.MustCompile(`[a-zA-Z]:\\(?:[a-zA-Z0-9._-]+\\){1,}`)
+	reIPv4             = regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`)
+	reSDKKey           = regexp.MustCompile(`(?i)(?:sk|pk|ak|key|token|secret|api[_-]?key)[_-]?[a-zA-Z0-9_-]{16,}`)
+	reServerKey        = regexp.MustCompile(`(?i)(?:srv|svr|server)[_-]?[a-zA-Z0-9_-]{16,}`)
+	reCLIKey           = regexp.MustCompile(`(?i)(?:cli|cmd|console)[_-]?[a-zA-Z0-9_-]{16,}`)
+	reEmail            = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
+	reConnectionString = regexp.MustCompile(`(?i)(?:mongodb|postgres|mysql|redis|amqp|mssql)://[^\s]+`)
+)
+
 var (
 	defaultSanitizationConfig *ErrorSanitizationConfig
 	sanitizationMu            sync.RWMutex
@@ -45,19 +58,20 @@ func init() {
 	}
 }
 
-// buildPatterns constructs the sanitization patterns based on the config.
+// buildPatterns constructs the sanitization patterns based on the config,
+// referencing pre-compiled package-level regex patterns.
 func buildPatterns(cfg *ErrorSanitizationConfig) []sanitizationPattern {
 	var patterns []sanitizationPattern
 
 	if cfg.SanitizeFilePaths {
 		patterns = append(patterns,
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`(?:/[a-zA-Z0-9._-]+){2,}`),
+				regex:       reUnixPath,
 				replacement: "[PATH_REDACTED]",
 				category:    "unix_path",
 			},
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`[a-zA-Z]:\\(?:[a-zA-Z0-9._-]+\\){1,}`),
+				regex:       reWindowsPath,
 				replacement: "[PATH_REDACTED]",
 				category:    "windows_path",
 			},
@@ -67,7 +81,7 @@ func buildPatterns(cfg *ErrorSanitizationConfig) []sanitizationPattern {
 	if cfg.SanitizeIPAddresses {
 		patterns = append(patterns,
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b`),
+				regex:       reIPv4,
 				replacement: "[IP_REDACTED]",
 				category:    "ipv4",
 			},
@@ -77,17 +91,17 @@ func buildPatterns(cfg *ErrorSanitizationConfig) []sanitizationPattern {
 	if cfg.SanitizeAPIKeys {
 		patterns = append(patterns,
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`(?i)(?:sk|pk|ak|key|token|secret|api[_-]?key)[_-]?[a-zA-Z0-9]{16,}`),
+				regex:       reSDKKey,
 				replacement: "[KEY_REDACTED]",
 				category:    "sdk_key",
 			},
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`(?i)(?:srv|svr|server)[_-]?[a-zA-Z0-9]{16,}`),
+				regex:       reServerKey,
 				replacement: "[SERVER_KEY_REDACTED]",
 				category:    "server_key",
 			},
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`(?i)(?:cli|cmd|console)[_-]?[a-zA-Z0-9]{16,}`),
+				regex:       reCLIKey,
 				replacement: "[CLI_KEY_REDACTED]",
 				category:    "cli_key",
 			},
@@ -97,7 +111,7 @@ func buildPatterns(cfg *ErrorSanitizationConfig) []sanitizationPattern {
 	if cfg.SanitizeEmails {
 		patterns = append(patterns,
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`),
+				regex:       reEmail,
 				replacement: "[EMAIL_REDACTED]",
 				category:    "email",
 			},
@@ -107,7 +121,7 @@ func buildPatterns(cfg *ErrorSanitizationConfig) []sanitizationPattern {
 	if cfg.SanitizeConnectionStrings {
 		patterns = append(patterns,
 			sanitizationPattern{
-				regex:       regexp.MustCompile(`(?i)(?:mongodb|postgres|mysql|redis|amqp|mssql)://[^\s]+`),
+				regex:       reConnectionString,
 				replacement: "[CONNECTION_STRING_REDACTED]",
 				category:    "connection_string",
 			},
