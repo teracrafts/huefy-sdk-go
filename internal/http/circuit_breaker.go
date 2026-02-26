@@ -96,7 +96,7 @@ func (cb *CircuitBreaker) Execute(fn func() error) error {
 		// Check if enough time has passed to transition to half-open.
 		if time.Since(cb.openedAt) >= cb.resetTimeout {
 			cb.state = StateHalfOpen
-			cb.halfOpenAttempts = 0
+			cb.halfOpenAttempts = 1 // Claim the first half-open attempt under the lock.
 			cb.mu.Unlock()
 			return cb.executeHalfOpen(fn)
 		}
@@ -110,6 +110,7 @@ func (cb *CircuitBreaker) Execute(fn func() error) error {
 			cb.mu.Unlock()
 			return &CircuitOpenError{ResetAt: resetAt}
 		}
+		cb.halfOpenAttempts++ // Claim the attempt under the lock before releasing.
 		cb.mu.Unlock()
 		return cb.executeHalfOpen(fn)
 
@@ -143,12 +144,9 @@ func (cb *CircuitBreaker) executeClosed(fn func() error) error {
 	return nil
 }
 
-// executeHalfOpen runs the function in the half-open state.
+// executeHalfOpen runs the function in the half-open state. The caller must
+// have already incremented halfOpenAttempts under the lock before calling.
 func (cb *CircuitBreaker) executeHalfOpen(fn func() error) error {
-	cb.mu.Lock()
-	cb.halfOpenAttempts++
-	cb.mu.Unlock()
-
 	err := fn()
 
 	cb.mu.Lock()
