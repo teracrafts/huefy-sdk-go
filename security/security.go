@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -72,7 +73,19 @@ func IsPotentialPIIField(fieldName string) bool {
 
 // DetectPotentialPII recursively scans a map for field names that may contain PII.
 // It returns a slice of dot-separated field paths that matched PII patterns.
+// A visited set (keyed by map pointer) guards against infinite recursion on circular references.
 func DetectPotentialPII(data map[string]any, prefix string) []string {
+	return detectPIIRecursive(data, prefix, make(map[uintptr]bool))
+}
+
+func detectPIIRecursive(data map[string]any, prefix string, visited map[uintptr]bool) []string {
+	// Guard against circular references using the map's pointer as key.
+	ptr := reflect.ValueOf(data).Pointer()
+	if visited[ptr] {
+		return nil
+	}
+	visited[ptr] = true
+
 	var found []string
 
 	for key, value := range data {
@@ -87,7 +100,7 @@ func DetectPotentialPII(data map[string]any, prefix string) []string {
 
 		// Recurse into nested maps.
 		if nested, ok := value.(map[string]any); ok {
-			found = append(found, DetectPotentialPII(nested, fullPath)...)
+			found = append(found, detectPIIRecursive(nested, fullPath, visited)...)
 		}
 	}
 
@@ -184,15 +197,12 @@ func VerifyRequestSignature(body, signature string, timestamp int64, apiKey stri
 
 // SignPayload signs a data map with the given API key and timestamp, returning
 // a SignedPayload that includes the original data, signature, timestamp, and
-// key identifier. The data is serialized using json.Marshal which produces
-// deterministic output with sorted keys.
-func SignPayload(data map[string]any, apiKey string, timestamp int64) SignedPayload {
-	// Serialize the data deterministically using JSON (encoding/json sorts map keys).
+// key identifier. Returns an error if the data cannot be JSON-serialized.
+func SignPayload(data map[string]any, apiKey string, timestamp int64) (SignedPayload, error) {
+	// encoding/json sorts map keys alphabetically, ensuring cross-SDK consistency.
 	bodyBytes, err := json.Marshal(data)
 	if err != nil {
-		// Fall back to empty body on marshal failure; callers should ensure
-		// data is JSON-serializable.
-		bodyBytes = []byte("{}")
+		return SignedPayload{}, fmt.Errorf("SignPayload: failed to marshal data: %w", err)
 	}
 	message := fmt.Sprintf("%d.%s", timestamp, string(bodyBytes))
 	signature := GenerateHMACSHA256(message, apiKey)
@@ -202,5 +212,5 @@ func SignPayload(data map[string]any, apiKey string, timestamp int64) SignedPayl
 		Signature: signature,
 		Timestamp: timestamp,
 		KeyID:     GetKeyID(apiKey),
-	}
+	}, nil
 }
