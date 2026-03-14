@@ -155,6 +155,14 @@ func (c *Client) doRequestFull(ctx context.Context, method, path string, body an
 		if err != nil {
 			return nil, sdkerrors.NewErrorWithCause(sdkerrors.ErrValidationFailed, "failed to marshal request body", err)
 		}
+		// Normalize to sorted-key JSON so HMAC signatures are consistent across
+		// SDKs regardless of struct field order (Go) vs sort_keys=True (Python).
+		var canonical map[string]any
+		if jsonErr := json.Unmarshal(bodyBytes, &canonical); jsonErr == nil {
+			if sorted, sortErr := json.Marshal(canonical); sortErr == nil {
+				bodyBytes = sorted
+			}
+		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
