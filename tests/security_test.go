@@ -270,7 +270,10 @@ func TestSignPayload(t *testing.T) {
 	apiKey := "sk_test_1234567890abcdef"
 	timestamp := time.Now().UnixMilli()
 
-	signed := security.SignPayload(data, apiKey, timestamp)
+	signed, err := security.SignPayload(data, apiKey, timestamp)
+	if err != nil {
+		t.Fatalf("unexpected error from SignPayload: %v", err)
+	}
 
 	if signed.Signature == "" {
 		t.Error("expected non-empty signature")
