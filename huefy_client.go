@@ -67,35 +67,67 @@ func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailReques
 	return &resp, nil
 }
 
-// SendBulkEmails sends multiple emails in a single request.
-func (c *EmailClient) SendBulkEmails(ctx context.Context, requests []models.SendEmailRequest) (*models.BulkEmailResponse, error) {
-	if err := validators.ValidateBulkCount(len(requests)); err != nil {
+// SendBulkEmails sends emails to multiple recipients using a single template.
+func (c *EmailClient) SendBulkEmails(ctx context.Context, templateKey string, recipients []models.BulkRecipient, opts ...BulkEmailOption) (*models.SendBulkEmailsResponse, error) {
+	if err := validators.ValidateBulkCount(len(recipients)); err != nil {
 		return nil, err
 	}
 
-	for i := range requests {
-		security.WarnIfPotentialPII(toAnyMap(requests[i].Data), "email template data", c.GetLogger())
-		errs := validators.ValidateSendEmailInput(requests[i].TemplateKey, requests[i].Data, requests[i].Recipient)
-		if len(errs) > 0 {
-			msgs := make([]string, len(errs))
-			for j, e := range errs {
-				msgs[j] = e.Error()
-			}
-			return nil, fmt.Errorf("validation failed for %s: %s", requests[i].Recipient, strings.Join(msgs, "; "))
-		}
-		requests[i].TemplateKey = strings.TrimSpace(requests[i].TemplateKey)
-		requests[i].Recipient = strings.TrimSpace(requests[i].Recipient)
+	req := models.SendBulkEmailsRequest{
+		TemplateKey: strings.TrimSpace(templateKey),
+		Recipients:  recipients,
+	}
+	for _, opt := range opts {
+		opt(&req)
 	}
 
-	data, err := c.Client.Request(ctx, "POST", "/emails/bulk", requests)
+	data, err := c.Client.Request(ctx, "POST", "/emails/send-bulk", req)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp models.BulkEmailResponse
+	var resp models.SendBulkEmailsResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	return &resp, nil
+}
+
+// BulkEmailOption is a functional option for SendBulkEmails.
+type BulkEmailOption func(*models.SendBulkEmailsRequest)
+
+// WithFromEmail sets the fromEmail field on a bulk email request.
+func WithFromEmail(email string) BulkEmailOption {
+	return func(r *models.SendBulkEmailsRequest) {
+		r.FromEmail = email
+	}
+}
+
+// WithFromName sets the fromName field on a bulk email request.
+func WithFromName(name string) BulkEmailOption {
+	return func(r *models.SendBulkEmailsRequest) {
+		r.FromName = name
+	}
+}
+
+// WithBulkProviderType sets the providerType field on a bulk email request.
+func WithBulkProviderType(providerType string) BulkEmailOption {
+	return func(r *models.SendBulkEmailsRequest) {
+		r.ProviderType = providerType
+	}
+}
+
+// WithBatchSize sets the batchSize field on a bulk email request.
+func WithBatchSize(size int) BulkEmailOption {
+	return func(r *models.SendBulkEmailsRequest) {
+		r.BatchSize = size
+	}
+}
+
+// WithBulkMetadata sets the metadata field on a bulk email request.
+func WithBulkMetadata(metadata map[string]interface{}) BulkEmailOption {
+	return func(r *models.SendBulkEmailsRequest) {
+		r.Metadata = metadata
+	}
 }
