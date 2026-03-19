@@ -6,6 +6,18 @@ import (
 	"github.com/teracrafts/huefy-go/types"
 )
 
+// RateLimitInfo holds the parsed rate limit state from response headers.
+type RateLimitInfo struct {
+	// Limit is the total number of requests allowed in the current window.
+	Limit int
+
+	// Remaining is the number of requests remaining in the current window.
+	Remaining int
+
+	// ResetAt is the time when the rate limit window resets.
+	ResetAt time.Time
+}
+
 // Config holds all configuration for the Huefy client.
 type Config struct {
 	// APIKey is the primary API key for authentication.
@@ -34,6 +46,12 @@ type Config struct {
 
 	// EnableErrorSanitization enables sanitization of sensitive data in error messages.
 	EnableErrorSanitization bool
+
+	// OnRateLimitUpdate is called after each response when rate limit headers are present.
+	OnRateLimitUpdate func(RateLimitInfo)
+
+	// OnRateLimitWarning is called when remaining requests fall below 20% of the limit.
+	OnRateLimitWarning func(RateLimitInfo)
 }
 
 // RetryConfig configures the retry behavior for failed requests.
@@ -141,6 +159,22 @@ func WithRequestSigning(enable bool) Option {
 func WithErrorSanitization(enable bool) Option {
 	return func(c *Config) {
 		c.EnableErrorSanitization = enable
+	}
+}
+
+// WithOnRateLimitUpdate sets a callback invoked after each response when rate
+// limit headers are present.
+func WithOnRateLimitUpdate(fn func(RateLimitInfo)) Option {
+	return func(c *Config) {
+		c.OnRateLimitUpdate = fn
+	}
+}
+
+// WithOnRateLimitWarning sets a callback invoked when remaining requests fall
+// below 20% of the limit.
+func WithOnRateLimitWarning(fn func(RateLimitInfo)) Option {
+	return func(c *Config) {
+		c.OnRateLimitWarning = fn
 	}
 }
 
