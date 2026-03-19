@@ -18,29 +18,82 @@ type SendEmailRequest struct {
 	ProviderType *EmailProvider    `json:"providerType,omitempty"`
 }
 
+// RecipientStatus represents the delivery status of a single recipient.
+type RecipientStatus struct {
+	Email     string  `json:"email"`
+	Status    string  `json:"status"`
+	MessageID string  `json:"messageId,omitempty"`
+	Error     string  `json:"error,omitempty"`
+	SentAt    *string `json:"sentAt,omitempty"`
+}
+
+// SendEmailResponseData is the data payload from a send-email response.
+type SendEmailResponseData struct {
+	EmailID     string            `json:"emailId"`
+	Status      string            `json:"status"`
+	Recipients  []RecipientStatus `json:"recipients"`
+	ScheduledAt *string           `json:"scheduledAt,omitempty"`
+	SentAt      *string           `json:"sentAt,omitempty"`
+}
+
 // SendEmailResponse represents the response from sending an email.
 type SendEmailResponse struct {
-	Success   bool   `json:"success"`
-	Message   string `json:"message"`
-	MessageID string `json:"messageId"`
-	Provider  string `json:"provider"`
+	Success       bool                  `json:"success"`
+	Data          SendEmailResponseData `json:"data"`
+	CorrelationID string                `json:"correlationId"`
 }
 
-// BulkEmailResult represents the result of a single email in a bulk operation.
-type BulkEmailResult struct {
-	Email   string             `json:"email"`
-	Success bool               `json:"success"`
-	Result  *SendEmailResponse `json:"result,omitempty"`
-	Error   *BulkEmailError    `json:"error,omitempty"`
+// BulkRecipient represents a single recipient in a bulk email send.
+type BulkRecipient struct {
+	Email string                 `json:"email"`
+	Type  string                 `json:"type,omitempty"`
+	Data  map[string]interface{} `json:"data,omitempty"`
 }
 
-// BulkEmailError represents an error for a single email in a bulk operation.
-type BulkEmailError struct {
-	Message string `json:"message"`
-	Code    string `json:"code"`
+// SendBulkEmailsRequest represents a request to send bulk emails via a template.
+type SendBulkEmailsRequest struct {
+	TemplateKey          string                 `json:"templateKey"`
+	Recipients           []BulkRecipient        `json:"recipients"`
+	FromEmail            string                 `json:"fromEmail,omitempty"`
+	FromName             string                 `json:"fromName,omitempty"`
+	ProviderType         string                 `json:"providerType,omitempty"`
+	BatchSize            int                    `json:"batchSize,omitempty"`
+	CorrelationID        string                 `json:"correlationId,omitempty"`
+	Metadata             map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// BulkEmailResponse represents the response from a bulk email operation.
-type BulkEmailResponse struct {
-	Results []BulkEmailResult `json:"results"`
+// SendBulkEmailsResponseData is the data payload from a send-bulk-emails response.
+type SendBulkEmailsResponseData struct {
+	BatchID         string            `json:"batchId"`
+	Status          string            `json:"status"`
+	TemplateKey     string            `json:"templateKey"`
+	TotalRecipients int               `json:"totalRecipients"`
+	ProcessedCount  int               `json:"processedCount"`
+	SuccessCount    int               `json:"successCount"`
+	FailureCount    int               `json:"failureCount"`
+	SuppressedCount int               `json:"suppressedCount"`
+	StartedAt       string            `json:"startedAt"`
+	CompletedAt     *string           `json:"completedAt,omitempty"`
+	Recipients      []RecipientStatus `json:"recipients"`
+}
+
+// SendBulkEmailsResponse represents the response from a bulk email operation.
+type SendBulkEmailsResponse struct {
+	Success       bool                       `json:"success"`
+	Data          SendBulkEmailsResponseData `json:"data"`
+	CorrelationID string                     `json:"correlationId"`
+}
+
+// HealthResponseData is the data payload from a health check response.
+type HealthResponseData struct {
+	Status    string `json:"status"`
+	Timestamp string `json:"timestamp"`
+	Version   string `json:"version"`
+}
+
+// HealthResponse represents the full health check API response.
+type HealthResponse struct {
+	Success       bool               `json:"success"`
+	Data          HealthResponseData `json:"data"`
+	CorrelationID string             `json:"correlationId"`
 }
