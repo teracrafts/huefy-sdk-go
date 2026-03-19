@@ -8,6 +8,7 @@ import (
 	"github.com/teracrafts/huefy-go/config"
 	sdkerrors "github.com/teracrafts/huefy-go/errors"
 	internalhttp "github.com/teracrafts/huefy-go/internal/http"
+	"github.com/teracrafts/huefy-go/models"
 	"github.com/teracrafts/huefy-go/types"
 )
 
@@ -45,13 +46,13 @@ func NewClient(apiKey string, opts ...config.Option) (*Client, error) {
 
 // HealthCheck performs a health check against the Huefy API.
 // It returns a HealthResponse on success or an error if the request fails.
-func (c *Client) HealthCheck(ctx context.Context) (*types.HealthResponse, error) {
+func (c *Client) HealthCheck(ctx context.Context) (*models.HealthResponse, error) {
 	data, err := c.httpClient.Request(ctx, "GET", "/health", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var health types.HealthResponse
+	var health models.HealthResponse
 	if err := json.Unmarshal(data, &health); err != nil {
 		return nil, err
 	}
