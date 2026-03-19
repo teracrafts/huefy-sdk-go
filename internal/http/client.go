@@ -204,6 +204,7 @@ func (c *Client) doRequestFull(ctx context.Context, method, path string, body an
 		return nil, sdkErr
 	}
 
+	c.parseRateLimitHeaders(resp.Header)
 	c.logger.Debug(fmt.Sprintf("response: %d %s", resp.StatusCode, url))
 	return respBody, nil
 }
@@ -265,6 +266,44 @@ func (c *Client) buildErrorFromResponse(resp *gohttp.Response, body []byte) *sdk
 	}
 
 	return sdkErr
+}
+
+// parseRateLimitHeaders reads X-RateLimit-* headers and fires the configured
+// callbacks when all three headers are present.
+func (c *Client) parseRateLimitHeaders(headers gohttp.Header) {
+	limitStr := headers.Get("X-RateLimit-Limit")
+	remainingStr := headers.Get("X-RateLimit-Remaining")
+	resetStr := headers.Get("X-RateLimit-Reset")
+
+	if limitStr == "" || remainingStr == "" || resetStr == "" {
+		return
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return
+	}
+	remaining, err := strconv.Atoi(remainingStr)
+	if err != nil {
+		return
+	}
+	resetUnix, err := strconv.ParseInt(resetStr, 10, 64)
+	if err != nil {
+		return
+	}
+
+	info := config.RateLimitInfo{
+		Limit:     limit,
+		Remaining: remaining,
+		ResetAt:   time.Unix(resetUnix, 0),
+	}
+
+	if c.config.OnRateLimitUpdate != nil {
+		c.config.OnRateLimitUpdate(info)
+	}
+	if c.config.OnRateLimitWarning != nil && limit > 0 && remaining < limit/5 {
+		c.config.OnRateLimitWarning(info)
+	}
 }
 
 // Close releases any resources held by the HTTP client.
