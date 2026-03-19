@@ -78,12 +78,17 @@ type (
 
 // Email model re-exports.
 type (
-	EmailProvider     = models.EmailProvider
-	SendEmailRequest  = models.SendEmailRequest
-	SendEmailResponse = models.SendEmailResponse
-	BulkEmailResult   = models.BulkEmailResult
-	BulkEmailError    = models.BulkEmailError
-	BulkEmailResponse = models.BulkEmailResponse
+	EmailProvider              = models.EmailProvider
+	SendEmailRequest           = models.SendEmailRequest
+	RecipientStatus            = models.RecipientStatus
+	SendEmailResponseData      = models.SendEmailResponseData
+	SendEmailResponse          = models.SendEmailResponse
+	BulkRecipient              = models.BulkRecipient
+	SendBulkEmailsRequest      = models.SendBulkEmailsRequest
+	SendBulkEmailsResponseData = models.SendBulkEmailsResponseData
+	SendBulkEmailsResponse     = models.SendBulkEmailsResponse
+	HealthResponseData         = models.HealthResponseData
+	HealthResponse             = models.HealthResponse
 )
 
 const (
@@ -95,8 +100,7 @@ const (
 
 // Types re-exports.
 type (
-	Logger         = types.Logger
-	HealthResponse = types.HealthResponse
+	Logger = types.Logger
 )
 
 var (
