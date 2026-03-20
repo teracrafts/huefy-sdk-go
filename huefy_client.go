@@ -73,6 +73,12 @@ func (c *EmailClient) SendBulkEmails(ctx context.Context, templateKey string, re
 		return nil, err
 	}
 
+	for i, r := range recipients {
+		if err := validators.ValidateEmail(r.Email); err != nil {
+			return nil, fmt.Errorf("recipients[%d]: %w", i, err)
+		}
+	}
+
 	req := models.SendBulkEmailsRequest{
 		TemplateKey: strings.TrimSpace(templateKey),
 		Recipients:  recipients,
