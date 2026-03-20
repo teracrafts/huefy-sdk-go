@@ -71,9 +71,9 @@ func WithRetry(ctx context.Context, fn func() error, cfg *config.RetryConfig, lo
 }
 
 // CalculateDelay computes the retry delay for the given attempt using
-// exponential backoff with full jitter. The formula is:
+// exponential backoff with ±20 % jitter. The formula is:
 //
-//	min(maxDelay, baseDelay * 2^attempt) * random(0.5, 1.0)
+//	min(maxDelay, baseDelay * 2^attempt) * random(0.8, 1.2)
 func CalculateDelay(attempt int, baseDelay, maxDelay time.Duration) time.Duration {
 	// Exponential backoff.
 	exp := math.Pow(2, float64(attempt))
@@ -84,8 +84,8 @@ func CalculateDelay(attempt int, baseDelay, maxDelay time.Duration) time.Duratio
 		delay = maxDelay
 	}
 
-	// Apply jitter (0.5 to 1.0 multiplier).
-	jitter := 0.5 + rand.Float64()*0.5
+	// Apply ±20% jitter (0.8 to 1.2 multiplier).
+	jitter := 0.8 + rand.Float64()*0.4
 	delay = time.Duration(float64(delay) * jitter)
 
 	return delay
