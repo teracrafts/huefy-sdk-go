@@ -88,8 +88,8 @@ func DefaultConfig(apiKey string) Config {
 		Timeout: 30 * time.Second,
 		RetryConfig: RetryConfig{
 			MaxRetries: 3,
-			BaseDelay:  1 * time.Second,
-			MaxDelay:   30 * time.Second,
+			BaseDelay:  500 * time.Millisecond,
+			MaxDelay:   10 * time.Second,
 			RetryableStatusCodes: []int{408, 429, 500, 502, 503, 504},
 		},
 		CircuitBreakerConfig: CircuitBreakerConfig{
