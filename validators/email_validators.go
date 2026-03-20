@@ -11,7 +11,7 @@ var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 const (
 	MaxEmailLength    = 254
 	MaxTemplateKeyLen = 100
-	MaxBulkEmails     = 100
+	MaxBulkEmails     = 1000
 )
 
 func ValidateEmail(email string) error {
