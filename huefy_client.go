@@ -29,18 +29,9 @@ func NewEmailClient(apiKey string, opts ...config.Option) (*EmailClient, error) 
 	}, nil
 }
 
-// toAnyMap converts a map[string]string to map[string]any for PII detection.
-func toAnyMap(m map[string]string) map[string]any {
-	result := make(map[string]any, len(m))
-	for k, v := range m {
-		result[k] = v
-	}
-	return result
-}
-
 // SendEmail sends a single email using a template.
 func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailRequest) (*models.SendEmailResponse, error) {
-	security.WarnIfPotentialPII(toAnyMap(req.Data), "email template data", c.GetLogger())
+	security.WarnIfPotentialPII(req.Data, "email template data", c.GetLogger())
 
 	errs := validators.ValidateSendEmailInput(req.TemplateKey, req.Data, req.Recipient)
 	if len(errs) > 0 {

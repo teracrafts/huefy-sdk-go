@@ -88,6 +88,10 @@ func CalculateDelay(attempt int, baseDelay, maxDelay time.Duration) time.Duratio
 	jitter := 0.8 + rand.Float64()*0.4
 	delay = time.Duration(float64(delay) * jitter)
 
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
 	return delay
 }
 

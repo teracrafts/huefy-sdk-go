@@ -42,7 +42,7 @@ func ValidateTemplateKey(key string) error {
 	return nil
 }
 
-func ValidateEmailData(data map[string]string) error {
+func ValidateEmailData(data map[string]any) error {
 	if data == nil {
 		return fmt.Errorf("template data is required")
 	}
@@ -59,7 +59,7 @@ func ValidateBulkCount(count int) error {
 	return nil
 }
 
-func ValidateSendEmailInput(templateKey string, data map[string]string, recipient string) []error {
+func ValidateSendEmailInput(templateKey string, data map[string]any, recipient string) []error {
 	var errs []error
 	if err := ValidateTemplateKey(templateKey); err != nil {
 		errs = append(errs, err)

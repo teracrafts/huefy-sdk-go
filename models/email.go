@@ -14,7 +14,7 @@ const (
 type SendEmailRequest struct {
 	TemplateKey  string            `json:"templateKey"`
 	Recipient    string            `json:"recipient"`
-	Data         map[string]string `json:"data"`
+	Data         map[string]any    `json:"data"`
 	ProviderType *EmailProvider    `json:"providerType,omitempty"`
 }
 

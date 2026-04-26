@@ -59,7 +59,7 @@ func TestValidateBulkCount(t *testing.T) {
 	}{
 		{"valid", 10, false},
 		{"zero", 0, true},
-		{"over limit", 101, true},
+		{"over limit", 1001, true},
 	}
 
 	for _, tt := range tests {
@@ -74,7 +74,7 @@ func TestValidateBulkCount(t *testing.T) {
 
 func TestValidateSendEmailInput(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
-		errs := validators.ValidateSendEmailInput("tpl", map[string]string{"name": "John"}, "user@test.com")
+			errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, "user@test.com")
 		if len(errs) != 0 {
 			t.Errorf("expected no errors, got %v", errs)
 		}
