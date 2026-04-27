@@ -97,6 +97,20 @@ func normalizeSendEmailRecipient(recipient any) (any, error) {
 			normalized["type"] = strings.ToLower(strings.TrimSpace(recipientType))
 		}
 		return normalized, nil
+	case map[string]string:
+		normalized := make(map[string]any, len(value))
+		for key, entry := range value {
+			if key == "email" {
+				normalized[key] = strings.TrimSpace(entry)
+				continue
+			}
+			if key == "type" {
+				normalized[key] = strings.ToLower(strings.TrimSpace(entry))
+				continue
+			}
+			normalized[key] = entry
+		}
+		return normalized, nil
 	default:
 		return nil, fmt.Errorf("recipient must be a string or recipient object")
 	}
@@ -135,13 +149,25 @@ func (c *EmailClient) SendBulkEmails(ctx context.Context, req *models.SendBulkEm
 		return nil, err
 	}
 
+	if err := validators.ValidateTemplateKey(req.TemplateKey); err != nil {
+		return nil, err
+	}
+
+	normalizedRecipients := make([]models.BulkRecipient, len(req.Recipients))
 	for i, r := range req.Recipients {
-		if err := validators.ValidateEmail(r.Email); err != nil {
+		if err := validators.ValidateBulkRecipient(r); err != nil {
 			return nil, fmt.Errorf("recipients[%d]: %w", i, err)
+		}
+
+		normalizedRecipients[i] = models.BulkRecipient{
+			Email: strings.TrimSpace(r.Email),
+			Type:  strings.ToLower(strings.TrimSpace(r.Type)),
+			Data:  r.Data,
 		}
 	}
 
 	req.TemplateKey = strings.TrimSpace(req.TemplateKey)
+	req.Recipients = normalizedRecipients
 
 	data, err := c.Client.Request(ctx, "POST", "/emails/send-bulk", req)
 	if err != nil {

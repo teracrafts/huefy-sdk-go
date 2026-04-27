@@ -121,3 +121,26 @@ func TestValidateSendEmailInput(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateBulkRecipient(t *testing.T) {
+	t.Run("valid bulk recipient", func(t *testing.T) {
+		err := validators.ValidateBulkRecipient(models.BulkRecipient{
+			Email: "user@test.com",
+			Type:  "cc",
+			Data:  map[string]any{"locale": "en"},
+		})
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("invalid bulk recipient type", func(t *testing.T) {
+		err := validators.ValidateBulkRecipient(models.BulkRecipient{
+			Email: "user@test.com",
+			Type:  "reply-to",
+		})
+		if err == nil || !strings.Contains(err.Error(), "recipient type") {
+			t.Fatalf("expected recipient type error, got %v", err)
+		}
+	})
+}

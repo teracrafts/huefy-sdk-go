@@ -116,6 +116,18 @@ func ValidateRecipient(recipient any) error {
 	return fmt.Errorf("recipient must be a string or recipient object")
 }
 
+func ValidateBulkRecipient(recipient models.BulkRecipient) error {
+	if err := ValidateEmail(recipient.Email); err != nil {
+		return err
+	}
+
+	if err := validateRecipientType(recipient.Type); err != nil {
+		return err
+	}
+
+	return validateRecipientData(recipient.Data)
+}
+
 func validateRecipientType(value any) error {
 	switch recipientType := value.(type) {
 	case nil:
