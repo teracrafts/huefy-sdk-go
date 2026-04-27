@@ -33,10 +33,14 @@ func main() {
     defer client.Close()
 
     ctx := context.Background()
-    response, err := client.SendEmail(ctx, huefy.SendEmailRequest{
+    response, err := client.SendEmail(ctx, &huefy.SendEmailRequest{
         TemplateKey: "welcome-email",
-        Recipient:   huefy.Recipient{Email: "alice@example.com", Name: "Alice"},
-        Variables:   map[string]any{"firstName": "Alice", "trialDays": 14},
+        Recipient: huefy.SendEmailRecipient{
+            Email: "alice@example.com",
+            Type:  "cc",
+            Data:  map[string]any{"firstName": "Alice"},
+        },
+        Data: map[string]any{"firstName": "Alice", "trialDays": 14},
     })
     if err != nil {
         log.Fatal(err)
@@ -90,10 +94,11 @@ func main() {
 ## Bulk Email
 
 ```go
-bulk, err := client.SendBulkEmails(ctx, huefy.BulkEmailRequest{
-    Emails: []huefy.SendEmailRequest{
-        {TemplateKey: "promo", Recipient: huefy.Recipient{Email: "bob@example.com"}},
-        {TemplateKey: "promo", Recipient: huefy.Recipient{Email: "carol@example.com"}},
+bulk, err := client.SendBulkEmails(ctx, &huefy.SendBulkEmailsRequest{
+    TemplateKey: "promo",
+    Recipients: []huefy.BulkRecipient{
+        {Email: "bob@example.com"},
+        {Email: "carol@example.com"},
     },
 })
 if err != nil {
@@ -155,12 +160,12 @@ if health.Status != "healthy" {
 
 ## Local Development
 
-Set `HUEFY_MODE=local` to point the SDK at a local Huefy server, or use `WithBaseURL`:
+Set `HUEFY_MODE=local` to target `https://api.huefy.on/api/v1/sdk`, or use `WithBaseURL`. To bypass Caddy and hit the raw app port, set `http://localhost:8080/api/v1/sdk` explicitly:
 
 ```go
 client, err := huefy.NewClient(
     "sdk_local_key",
-    huefy.WithBaseURL("http://localhost:3000/api/v1/sdk"),
+    huefy.WithBaseURL("https://api.huefy.on/api/v1/sdk"),
 )
 ```
 

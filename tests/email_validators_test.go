@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/teracrafts/huefy-go/models"
 	"github.com/teracrafts/huefy-go/validators"
 )
 
@@ -74,7 +75,18 @@ func TestValidateBulkCount(t *testing.T) {
 
 func TestValidateSendEmailInput(t *testing.T) {
 	t.Run("valid input", func(t *testing.T) {
-			errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, "user@test.com")
+		errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, "user@test.com")
+		if len(errs) != 0 {
+			t.Errorf("expected no errors, got %v", errs)
+		}
+	})
+
+	t.Run("valid recipient object", func(t *testing.T) {
+		errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, models.SendEmailRecipient{
+			Email: "user@test.com",
+			Type:  "cc",
+			Data:  map[string]any{"locale": "en"},
+		})
 		if len(errs) != 0 {
 			t.Errorf("expected no errors, got %v", errs)
 		}
@@ -84,6 +96,28 @@ func TestValidateSendEmailInput(t *testing.T) {
 		errs := validators.ValidateSendEmailInput("", nil, "bad")
 		if len(errs) == 0 {
 			t.Error("expected errors, got none")
+		}
+	})
+
+	t.Run("invalid recipient object", func(t *testing.T) {
+		errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, models.SendEmailRecipient{
+			Email: "bad",
+		})
+		if len(errs) != 1 {
+			t.Fatalf("expected 1 error, got %d", len(errs))
+		}
+	})
+
+	t.Run("invalid recipient object type", func(t *testing.T) {
+		errs := validators.ValidateSendEmailInput("tpl", map[string]any{"name": "John"}, models.SendEmailRecipient{
+			Email: "user@test.com",
+			Type:  "reply-to",
+		})
+		if len(errs) != 1 {
+			t.Fatalf("expected 1 error, got %d", len(errs))
+		}
+		if !strings.Contains(errs[0].Error(), "recipient type") {
+			t.Fatalf("expected recipient type error, got %v", errs[0])
 		}
 	})
 }

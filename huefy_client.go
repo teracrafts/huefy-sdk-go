@@ -10,6 +10,7 @@ import (
 	"github.com/teracrafts/huefy-go/config"
 	"github.com/teracrafts/huefy-go/models"
 	"github.com/teracrafts/huefy-go/security"
+	"github.com/teracrafts/huefy-go/types"
 	"github.com/teracrafts/huefy-go/validators"
 )
 
@@ -32,6 +33,7 @@ func NewEmailClient(apiKey string, opts ...config.Option) (*EmailClient, error) 
 // SendEmail sends a single email using a template.
 func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailRequest) (*models.SendEmailResponse, error) {
 	security.WarnIfPotentialPII(req.Data, "email template data", c.GetLogger())
+	warnIfPotentialRecipientPII(req.Recipient, c.GetLogger())
 
 	errs := validators.ValidateSendEmailInput(req.TemplateKey, req.Data, req.Recipient)
 	if len(errs) > 0 {
@@ -43,7 +45,11 @@ func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailReques
 	}
 
 	req.TemplateKey = strings.TrimSpace(req.TemplateKey)
-	req.Recipient = strings.TrimSpace(req.Recipient)
+	normalizedRecipient, err := normalizeSendEmailRecipient(req.Recipient)
+	if err != nil {
+		return nil, err
+	}
+	req.Recipient = normalizedRecipient
 
 	data, err := c.Client.Request(ctx, "POST", "/emails/send", req)
 	if err != nil {
@@ -56,6 +62,71 @@ func (c *EmailClient) SendEmail(ctx context.Context, req *models.SendEmailReques
 	}
 
 	return &resp, nil
+}
+
+func normalizeSendEmailRecipient(recipient any) (any, error) {
+	switch value := recipient.(type) {
+	case string:
+		return strings.TrimSpace(value), nil
+	case *string:
+		if value == nil {
+			return nil, fmt.Errorf("recipient email is required")
+		}
+		return strings.TrimSpace(*value), nil
+	case models.SendEmailRecipient:
+		value.Email = strings.TrimSpace(value.Email)
+		value.Type = strings.ToLower(strings.TrimSpace(value.Type))
+		return value, nil
+	case *models.SendEmailRecipient:
+		if value == nil {
+			return nil, fmt.Errorf("recipient email is required")
+		}
+		normalized := *value
+		normalized.Email = strings.TrimSpace(normalized.Email)
+		normalized.Type = strings.ToLower(strings.TrimSpace(normalized.Type))
+		return normalized, nil
+	case map[string]any:
+		normalized := make(map[string]any, len(value))
+		for key, entry := range value {
+			normalized[key] = entry
+		}
+		if email, ok := normalized["email"].(string); ok {
+			normalized["email"] = strings.TrimSpace(email)
+		}
+		if recipientType, ok := normalized["type"].(string); ok {
+			normalized["type"] = strings.ToLower(strings.TrimSpace(recipientType))
+		}
+		return normalized, nil
+	default:
+		return nil, fmt.Errorf("recipient must be a string or recipient object")
+	}
+}
+
+func warnIfPotentialRecipientPII(recipient any, logger types.Logger) {
+	switch value := recipient.(type) {
+	case models.SendEmailRecipient:
+		if value.Data != nil {
+			security.WarnIfPotentialPII(value.Data, "recipient data", logger)
+		}
+	case *models.SendEmailRecipient:
+		if value != nil && value.Data != nil {
+			security.WarnIfPotentialPII(value.Data, "recipient data", logger)
+		}
+	case map[string]any:
+		if data, ok := value["data"].(map[string]any); ok {
+			security.WarnIfPotentialPII(data, "recipient data", logger)
+		}
+	case map[string]string:
+		data := map[string]any{}
+		for key, entry := range value {
+			if key == "data" {
+				data[key] = entry
+			}
+		}
+		if len(data) > 0 {
+			security.WarnIfPotentialPII(data, "recipient data", logger)
+		}
+	}
 }
 
 // SendBulkEmails sends emails to multiple recipients using a single template.

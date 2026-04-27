@@ -12,10 +12,17 @@ const (
 
 // SendEmailRequest represents a request to send a single email.
 type SendEmailRequest struct {
-	TemplateKey  string            `json:"templateKey"`
-	Recipient    string            `json:"recipient"`
-	Data         map[string]any    `json:"data"`
-	ProviderType *EmailProvider    `json:"providerType,omitempty"`
+	TemplateKey  string         `json:"templateKey"`
+	Recipient    any            `json:"recipient"`
+	Data         map[string]any `json:"data"`
+	ProviderType *EmailProvider `json:"providerType,omitempty"`
+}
+
+// SendEmailRecipient represents the expanded recipient object supported by the API.
+type SendEmailRecipient struct {
+	Email string         `json:"email"`
+	Type  string         `json:"type,omitempty"`
+	Data  map[string]any `json:"data,omitempty"`
 }
 
 // RecipientStatus represents the delivery status of a single recipient.
@@ -52,14 +59,14 @@ type BulkRecipient struct {
 
 // SendBulkEmailsRequest represents a request to send bulk emails via a template.
 type SendBulkEmailsRequest struct {
-	TemplateKey          string                 `json:"templateKey"`
-	Recipients           []BulkRecipient        `json:"recipients"`
-	FromEmail            string                 `json:"fromEmail,omitempty"`
-	FromName             string                 `json:"fromName,omitempty"`
-	ProviderType         string                 `json:"providerType,omitempty"`
-	BatchSize            int                    `json:"batchSize,omitempty"`
-	CorrelationID        string                 `json:"correlationId,omitempty"`
-	Metadata             map[string]interface{} `json:"metadata,omitempty"`
+	TemplateKey   string                 `json:"templateKey"`
+	Recipients    []BulkRecipient        `json:"recipients"`
+	FromEmail     string                 `json:"fromEmail,omitempty"`
+	FromName      string                 `json:"fromName,omitempty"`
+	ProviderType  string                 `json:"providerType,omitempty"`
+	BatchSize     int                    `json:"batchSize,omitempty"`
+	CorrelationID string                 `json:"correlationId,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // SendBulkEmailsResponseData is the data payload from a send-bulk-emails response.
@@ -67,6 +74,9 @@ type SendBulkEmailsResponseData struct {
 	BatchID         string            `json:"batchId"`
 	Status          string            `json:"status"`
 	TemplateKey     string            `json:"templateKey"`
+	TemplateVersion int               `json:"templateVersion"`
+	SenderUsed      string            `json:"senderUsed"`
+	SenderVerified  bool              `json:"senderVerified"`
 	TotalRecipients int               `json:"totalRecipients"`
 	ProcessedCount  int               `json:"processedCount"`
 	SuccessCount    int               `json:"successCount"`
@@ -75,6 +85,8 @@ type SendBulkEmailsResponseData struct {
 	StartedAt       string            `json:"startedAt"`
 	CompletedAt     *string           `json:"completedAt,omitempty"`
 	Recipients      []RecipientStatus `json:"recipients"`
+	Errors          []map[string]any  `json:"errors,omitempty"`
+	Metadata        map[string]any    `json:"metadata,omitempty"`
 }
 
 // SendBulkEmailsResponse represents the response from a bulk email operation.

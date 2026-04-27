@@ -4,9 +4,16 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/teracrafts/huefy-go/models"
 )
 
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+var validRecipientTypes = map[string]struct{}{
+	"to":  {},
+	"cc":  {},
+	"bcc": {},
+}
 
 const (
 	MaxEmailLength    = 254
@@ -59,7 +66,84 @@ func ValidateBulkCount(count int) error {
 	return nil
 }
 
-func ValidateSendEmailInput(templateKey string, data map[string]any, recipient string) []error {
+func ValidateRecipient(recipient any) error {
+	switch value := recipient.(type) {
+	case string:
+		return ValidateEmail(value)
+	case *string:
+		if value == nil {
+			return fmt.Errorf("recipient email is required")
+		}
+		return ValidateEmail(*value)
+	case map[string]any:
+		email, _ := value["email"].(string)
+		if err := ValidateEmail(email); err != nil {
+			return err
+		}
+		if err := validateRecipientType(value["type"]); err != nil {
+			return err
+		}
+		if err := validateRecipientData(value["data"]); err != nil {
+			return err
+		}
+		return nil
+	case map[string]string:
+		if err := ValidateEmail(value["email"]); err != nil {
+			return err
+		}
+		return validateRecipientType(value["type"])
+	case models.SendEmailRecipient:
+		if err := ValidateEmail(value.Email); err != nil {
+			return err
+		}
+		if err := validateRecipientType(value.Type); err != nil {
+			return err
+		}
+		return validateRecipientData(value.Data)
+	case *models.SendEmailRecipient:
+		if value == nil {
+			return fmt.Errorf("recipient email is required")
+		}
+		if err := ValidateEmail(value.Email); err != nil {
+			return err
+		}
+		if err := validateRecipientType(value.Type); err != nil {
+			return err
+		}
+		return validateRecipientData(value.Data)
+	}
+
+	return fmt.Errorf("recipient must be a string or recipient object")
+}
+
+func validateRecipientType(value any) error {
+	switch recipientType := value.(type) {
+	case nil:
+		return nil
+	case string:
+		normalized := strings.ToLower(strings.TrimSpace(recipientType))
+		if normalized == "" {
+			return nil
+		}
+		if _, ok := validRecipientTypes[normalized]; ok {
+			return nil
+		}
+		return fmt.Errorf("recipient type must be one of: to, cc, bcc")
+	default:
+		return fmt.Errorf("recipient type must be one of: to, cc, bcc")
+	}
+}
+
+func validateRecipientData(value any) error {
+	switch value.(type) {
+	case nil, map[string]any, map[string]string:
+		return nil
+	default:
+		return fmt.Errorf("recipient data must be an object")
+	}
+}
+
+func ValidateSendEmailInput(templateKey string, data map[string]any, recipient any) []error {
 	var errs []error
 	if err := ValidateTemplateKey(templateKey); err != nil {
 		errs = append(errs, err)
@@ -67,7 +151,7 @@ func ValidateSendEmailInput(templateKey string, data map[string]any, recipient s
 	if err := ValidateEmailData(data); err != nil {
 		errs = append(errs, err)
 	}
-	if err := ValidateEmail(recipient); err != nil {
+	if err := ValidateRecipient(recipient); err != nil {
 		errs = append(errs, err)
 	}
 	return errs

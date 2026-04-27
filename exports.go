@@ -31,9 +31,9 @@ var NewClient = client.NewClient
 
 // Config re-exports.
 type (
-	Config              = config.Config
-	Option              = config.Option
-	RetryConfig         = config.RetryConfig
+	Config               = config.Config
+	Option               = config.Option
+	RetryConfig          = config.RetryConfig
 	CircuitBreakerConfig = config.CircuitBreakerConfig
 )
 
@@ -53,22 +53,22 @@ var (
 type HuefyError = errors.HuefyError
 
 var (
-	NewError          = errors.NewError
-	NewErrorWithCause = errors.NewErrorWithCause
-	NetworkError      = errors.NetworkError
+	NewError            = errors.NewError
+	NewErrorWithCause   = errors.NewErrorWithCause
+	NetworkError        = errors.NetworkError
 	AuthenticationError = errors.AuthenticationError
-	SecurityError     = errors.SecurityError
-	IsRecoverable     = errors.IsRecoverable
+	SecurityError       = errors.SecurityError
+	IsRecoverable       = errors.IsRecoverable
 )
 
 // Security re-exports.
 var (
-	DetectPotentialPII      = security.DetectPotentialPII
-	WarnIfPotentialPII      = security.WarnIfPotentialPII
-	GenerateHMACSHA256      = security.GenerateHMACSHA256
-	CreateRequestSignature  = security.CreateRequestSignature
-	VerifyRequestSignature  = security.VerifyRequestSignature
-	SignPayload             = security.SignPayload
+	DetectPotentialPII     = security.DetectPotentialPII
+	WarnIfPotentialPII     = security.WarnIfPotentialPII
+	GenerateHMACSHA256     = security.GenerateHMACSHA256
+	CreateRequestSignature = security.CreateRequestSignature
+	VerifyRequestSignature = security.VerifyRequestSignature
+	SignPayload            = security.SignPayload
 )
 
 type (
@@ -80,6 +80,7 @@ type (
 type (
 	EmailProvider              = models.EmailProvider
 	SendEmailRequest           = models.SendEmailRequest
+	SendEmailRecipient         = models.SendEmailRecipient
 	RecipientStatus            = models.RecipientStatus
 	SendEmailResponseData      = models.SendEmailResponseData
 	SendEmailResponse          = models.SendEmailResponse

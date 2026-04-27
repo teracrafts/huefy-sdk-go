@@ -10,7 +10,7 @@ A standalone verification runner for the Huefy Go SDK.
 4. **Error sanitization** — IP and email redacted from error messages
 5. **PII detection** — email and SSN fields detected in data map
 6. **Circuit breaker state** — new circuit breaker starts in CLOSED state
-7. **Health check** — GET /health; passes regardless of network outcome
+7. **Health check** — invoke `GET /health` against the configured base URL
 8. **Cleanup** — close client gracefully
 
 ## Run
