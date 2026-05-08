@@ -40,6 +40,7 @@ type (
 // Option function re-exports.
 var (
 	WithBaseURL              = config.WithBaseURL
+	WithHTTPTransport        = config.WithHTTPTransport
 	WithTimeout              = config.WithTimeout
 	WithRetryConfig          = config.WithRetryConfig
 	WithCircuitBreakerConfig = config.WithCircuitBreakerConfig

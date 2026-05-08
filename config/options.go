@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/teracrafts/huefy-go/types"
@@ -25,6 +26,10 @@ type Config struct {
 
 	// BaseURL is the base URL of the Huefy API.
 	BaseURL string
+
+	// HTTPTransport overrides the default HTTP transport. Intended for
+	// deterministic integration harnesses such as the SDK lab.
+	HTTPTransport http.RoundTripper
 
 	// Timeout is the HTTP request timeout duration.
 	Timeout time.Duration
@@ -117,6 +122,13 @@ func WithBaseURL(url string) Option {
 func WithTimeout(timeout time.Duration) Option {
 	return func(c *Config) {
 		c.Timeout = timeout
+	}
+}
+
+// WithHTTPTransport sets a custom HTTP transport for the underlying client.
+func WithHTTPTransport(transport http.RoundTripper) Option {
+	return func(c *Config) {
+		c.HTTPTransport = transport
 	}
 }
 

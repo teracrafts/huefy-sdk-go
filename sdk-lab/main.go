@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,46 +32,42 @@ type capturedRequest struct {
 	Body   map[string]any
 }
 
-type stubServer struct {
-	server   *httptest.Server
+type stubTransport struct {
 	mu       sync.Mutex
 	requests []capturedRequest
 }
 
-func newStubServer() *stubServer {
-	stub := &stubServer{}
+func newStubTransport() *stubTransport {
+	return &stubTransport{}
+}
 
-	stub.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (s *stubTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	var body map[string]any
+	if r.Body != nil {
 		defer r.Body.Close()
-
-		var body map[string]any
 		rawBody, err := io.ReadAll(r.Body)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+			return s.jsonResponse(http.StatusInternalServerError, `{"message":"failed to read body"}`), nil
 		}
 		if len(rawBody) > 0 {
 			if err := json.Unmarshal(rawBody, &body); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte(`{"message":"invalid json"}`))
-				return
+				return s.jsonResponse(http.StatusBadRequest, `{"message":"invalid json"}`), nil
 			}
 		}
+	}
 
-		stub.mu.Lock()
-		stub.requests = append(stub.requests, capturedRequest{
-			Method: r.Method,
-			Path:   r.URL.Path,
-			Header: r.Header.Clone(),
-			Body:   body,
-		})
-		stub.mu.Unlock()
+	s.mu.Lock()
+	s.requests = append(s.requests, capturedRequest{
+		Method: r.Method,
+		Path:   r.URL.Path,
+		Header: r.Header.Clone(),
+		Body:   body,
+	})
+	s.mu.Unlock()
 
-		w.Header().Set("Content-Type", "application/json")
-
-		switch r.URL.Path {
-		case "/emails/send":
-			_, _ = w.Write([]byte(`{
+	switch r.URL.Path {
+	case "/emails/send":
+		return s.jsonResponse(http.StatusOK, `{
 				"success": true,
 				"data": {
 					"emailId": "email_123",
@@ -81,9 +77,9 @@ func newStubServer() *stubServer {
 					]
 				},
 				"correlationId": "corr_send"
-			}`))
-		case "/emails/send-bulk":
-			_, _ = w.Write([]byte(`{
+			}`), nil
+	case "/emails/send-bulk":
+		return s.jsonResponse(http.StatusOK, `{
 				"success": true,
 				"data": {
 					"batchId": "batch_123",
@@ -104,9 +100,9 @@ func newStubServer() *stubServer {
 					]
 				},
 				"correlationId": "corr_bulk"
-			}`))
-		case "/health":
-			_, _ = w.Write([]byte(`{
+			}`), nil
+	case "/health":
+		return s.jsonResponse(http.StatusOK, `{
 				"success": true,
 				"data": {
 					"status": "healthy",
@@ -114,31 +110,29 @@ func newStubServer() *stubServer {
 					"version": "test"
 				},
 				"correlationId": "corr_health"
-			}`))
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"message":"not found"}`))
-		}
-	}))
-
-	return stub
+			}`), nil
+	default:
+		return s.jsonResponse(http.StatusNotFound, `{"message":"not found"}`), nil
+	}
 }
 
-func (s *stubServer) Close() {
-	s.server.Close()
+func (s *stubTransport) jsonResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Header: http.Header{
+			"Content-Type": []string{"application/json"},
+		},
+		Body: io.NopCloser(strings.NewReader(body)),
+	}
 }
 
-func (s *stubServer) URL() string {
-	return s.server.URL
-}
-
-func (s *stubServer) RequestCount() int {
+func (s *stubTransport) RequestCount() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.requests)
 }
 
-func (s *stubServer) RequestAt(index int) (capturedRequest, bool) {
+func (s *stubTransport) RequestAt(index int) (capturedRequest, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if index < 0 || index >= len(s.requests) {
@@ -161,15 +155,15 @@ func main() {
 	fmt.Println("=== Huefy Go SDK Lab ===")
 	fmt.Println()
 
-	stub := newStubServer()
-	defer stub.Close()
+	stub := newStubTransport()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	client, err := huefy.NewEmailClient(
 		"sdk_lab_test_key",
-		huefy.WithBaseURL(stub.URL()),
+		huefy.WithBaseURL("https://sdk-lab.invalid"),
+		huefy.WithHTTPTransport(stub),
 		huefy.WithTimeout(2*time.Second),
 	)
 	if err != nil {

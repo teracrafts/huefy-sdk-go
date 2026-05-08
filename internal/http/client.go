@@ -55,8 +55,12 @@ func NewClient(apiKey string, cfg *config.Config) *Client {
 		cfg.BaseURL = baseURL
 	}
 
-	transport := gohttp.DefaultTransport.(*gohttp.Transport).Clone()
-	transport.MaxIdleConnsPerHost = 20
+	transport := cfg.HTTPTransport
+	if transport == nil {
+		cloned := gohttp.DefaultTransport.(*gohttp.Transport).Clone()
+		cloned.MaxIdleConnsPerHost = 20
+		transport = cloned
+	}
 
 	httpClient := &gohttp.Client{
 		Timeout:   cfg.Timeout,
