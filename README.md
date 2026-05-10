@@ -160,7 +160,7 @@ if health.Status != "healthy" {
 
 ## Local Development
 
-Set `HUEFY_MODE=local` to target `https://api.huefy.on/api/v1/sdk`, or use `WithBaseURL`. To bypass Caddy and hit the raw app port, set `http://localhost:8080/api/v1/sdk` explicitly:
+Set `HUEFY_MODE=local` to target `https://api.huefy.on/api/v1/sdk`, or use `WithBaseURL`. To bypass Caddy and hit the raw app port, set `http://localhost:3140/api/v1/sdk` explicitly:
 
 ```go
 client, err := huefy.NewClient(
